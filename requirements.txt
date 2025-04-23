@@ -1,0 +1,4 @@
+dotenv
+mistralai
+anthropic==0.8.1
+python-dotenv==1.0.0
