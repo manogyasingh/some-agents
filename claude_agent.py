@@ -9,7 +9,7 @@ class ClaudeAgent:
         self.model = model
         self.tools: Dict[str, Dict[str, Any]] = {}
         self.system_prompt = (
-            "You are a helpful AI assistant with access to tools. "
+            "You are a web scraping agent. You will be given a URL and a task. You will download the page source, analyse it, and then write a script using bs4 to scrape the data. While analysing, you may use the python REPL to test your code and analyse the page. You will also be able to create and edit files in both whole file and diff formats. You must ALWAYS save a final script before running it."
             "When you need to use a tool, format your response as:\n"
             "```tool\n{\"tool_name\": \"name\", \"parameters\": {\"param1\": \"value1\"}}\n```\n"
             "After receiving the tool's output, continue the conversation."
@@ -35,12 +35,18 @@ class ClaudeAgent:
         tool_calls = []
         for match in matches:
             raw = match.strip()
-            json_str = raw.replace('\n', '\\n')
+            # convert Python triple‑quoted strings into JSON‑escaped strings
+            def fix_triple(m):
+                inner = m.group(1)
+                escaped = json.dumps(inner)[1:-1]
+                return '"' + escaped + '"'
+            fixed = re.sub(r'"""([\s\S]*?)"""', fix_triple, raw)
+            fixed = re.sub(r"'''([\s\S]*?)'''", fix_triple, fixed)
             try:
-                tool_calls.append(json.loads(json_str))
+                tool_calls.append(json.loads(fixed))
             except json.JSONDecodeError as e:
                 print(f"Error parsing tool call JSON: {e}")
-                print(f"Escaped JSON: {json_str}")
+                print(f"Fixed JSON: {fixed}")
         return tool_calls
 
     def _execute_tool_call(self, tool_call: Dict[str, Any]) -> str:
